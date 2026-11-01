@@ -29,6 +29,7 @@ export function renderAccounts(app) {
 // Marking an account as an ISA changes what payments into it count as, past and future.
 function setIsa(app, key, account, isIsa) {
   account.isIsa = isIsa;
+  account.updatedAt = Date.now();
   for (const pattern of FUNDING_PATTERNS[key] ?? []) {
     setRule(app.state, pattern, isIsa ? 'ISA contribution' : 'Investing & crypto');
   }

@@ -4,6 +4,7 @@ import { pairCardRepayments } from '../core/categorise.js';
 import { calculated, dayName, fullDate, h, money, monthName, notice, percent, plural, row, today } from './dom.js';
 
 const STALE_DAYS = 35;
+const BACKUP_REMINDER_DAYS = 30;
 const daysBetween = (a, b) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000);
 
 export function renderOverview(app) {
@@ -74,6 +75,12 @@ function attention(app, nw, ym) {
   if (unpaired.length) {
     items.push(notice('attention', `Needs attention: ${plural(unpaired.length, 'card payment has', 'card payments have')} no match`,
       h('p', null, 'The current-account side may be counting as spending. ', h('a', { href: '#import' }, 'See details'))));
+  }
+
+  const lastBackup = state.meta.lastBackupAt;
+  if (!lastBackup || daysBetween(new Date(lastBackup).toISOString().slice(0, 10), today()) > BACKUP_REMINDER_DAYS) {
+    items.push(notice('attention', lastBackup ? 'Time for a backup' : 'No backup yet',
+      h('p', null, 'This device could lose its data, and the other device only updates from a backup. ', h('a', { href: '#import' }, 'Create a backup'))));
   }
 
   if (ym) {

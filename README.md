@@ -4,8 +4,8 @@ One private place for your whole financial position, how you are tracking agains
 goals, and where to optimise. It runs on your own devices, makes no model calls, and
 cannot move money or place trades. Every insight is plain rules and arithmetic.
 
-**Status: Phase 3 ready for review.** All five screens work on this Mac: Overview, Spending,
-Goals, Accounts and Import. Installing on your phone and backup come in Phase 4.
+**Status: Phase 4 ready for review.** All five screens, encrypted backup and sync, the
+passphrase lock and offline use all work. See `SECURITY.md` for what is and is not protected.
 
 ## Running the app
 
@@ -15,7 +15,38 @@ Goals, Accounts and Import. Installing on your phone and backup come in Phase 4.
 
 Then open http://localhost:8123. The server only hands files to your browser and only
 listens on this Mac. Your data is saved inside whichever browser you use, so another browser
-starts empty. It is not encrypted until the passphrase lock arrives in Phase 4.
+starts empty. It is only encrypted if you turn on the passphrase lock, on the Import screen.
+
+## Using it on your iPhone
+
+The installed app needs to be downloaded once over HTTPS, so its code (never your data) is
+published on GitHub Pages. In Safari on your iPhone, open the app's address, tap Share, then
+Add to Home Screen. Open it once while online, and it then works with no connection.
+
+## Moving data between devices
+
+There is no server, so devices share data through an encrypted file:
+
+1. On one device, go to Import, then Create an encrypted backup, and save it to iCloud Drive.
+2. On the other device, go to Import, then Sync or restore from a backup, and choose that file.
+
+Each item merges on its own and the newest edit wins, so work on both devices survives. A
+category you chose by hand beats one set by a rule. Removing a pension provider carries across.
+
+**The trade-off, honestly:** this is manual, and it takes a few taps each time, because an
+iPhone web app cannot read an iCloud folder by itself. A device only knows what you last synced.
+In return there is no server or account, and Apple only ever holds encrypted data. AirDropping
+the same file is a private alternative that skips the cloud altogether.
+
+Importing on your laptop then syncing to your phone is the simplest routine.
+
+## After changing any app file
+
+The offline copy uses a generated list. A test fails if you forget to update it.
+
+```bash
+.tools/node/bin/node tools/update-sw.mjs
+```
 
 ## What stays private
 
@@ -76,13 +107,19 @@ prints check results and counts only, never your transactions.
 | `src/core/analysis.js` | Monthly totals, changes, net worth and data gaps. |
 | `src/core/insights.js` | Goal measures and every optimisation rule. |
 | `src/core/summary.js` | The plain-text summary to paste into a Claude chat. |
+| `src/core/crypto.js` | Passphrase encryption for backups and the lock. |
+| `src/core/merge.js` | Checks a backup is valid, then combines it with this device's data. |
 | `src/store.js` | Saves the data in the browser's private storage. |
+| `src/pwa.js`, `sw.js`, `manifest.webmanifest` | Make the app installable and offline. `sw.js` holds code only, never your data. |
+| `SECURITY.md` | What is protected, what is not, and the security review. |
 | `src/app.js` | Starts the app, switches screens and saves after each change. |
 | `src/ui/*.js` | One file per screen, plus `dom.js` helpers that insert all text safely. |
 | `src/ui/styles.css` | Layout and the light and dark colours. |
 | `vendor/pdfjs/` | The bundled copy of pdf.js. A test checks it matches the pinned package. |
 | `tools/serve.mjs` | The development server. It refuses to serve your private folders. |
 | `tests/analysis.test.js`, `tests/insights.test.js` | Tests for the numbers shown on the screens. |
+| `tests/security.test.js` | Tests for encryption, sync, bad backups and the offline list. |
+| `tools/update-sw.mjs` | Regenerates the offline file list in `sw.js`. |
 | `src/core/defaults.js` | Starting categories, generic merchant rules, accounts and thresholds. |
 | `src/core/categorise.js` | Matches descriptions to categories, and derives a short merchant name. |
 | `src/core/model.js` | The data itself: transactions, balances, rules, goals and duplicate-safe import. |

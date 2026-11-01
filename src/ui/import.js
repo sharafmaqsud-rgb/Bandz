@@ -7,6 +7,7 @@ import { formatPence } from '../core/money.js';
 import { parseStatement, importStatement } from '../core/pdf-statements.js';
 import { extractPages } from '../core/pdf-text.js';
 import { categorySelect, fullDate, h, money, notice, plural } from './dom.js';
+import { renderSecurity } from './security.js';
 
 // pdf.js is large, so it only loads when a statement is actually being read. Its worker
 // comes from this app's own files, which the content policy allows.
@@ -15,6 +16,8 @@ async function loadPdfJs() {
   pdfjs.GlobalWorkerOptions.workerSrc = new URL('../../vendor/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
   return pdfjs;
 }
+
+const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
 async function importPdf(app, file) {
   const pages = await extractPages(await loadPdfJs(), new Uint8Array(await file.arrayBuffer()));
@@ -49,6 +52,7 @@ async function handleFiles(app, files) {
   app.render();
   for (const file of files) {
     try {
+      if (file.size > MAX_FILE_BYTES) throw new Error('That file is too large to be a statement.');
       const isSeed = file.name.toLowerCase().endsWith('.json');
       view.importResults.push(await (isSeed ? importSeed(app, file) : importPdf(app, file)));
     } catch (err) {
@@ -107,6 +111,7 @@ export function renderImport(app) {
       h('div', { className: 'rows' }, statements.map((s) => h('div', { className: 'row' },
         h('div', null, state.accounts[s.account].name, h('div', { className: 'muted' }, `to ${fullDate(s.date)}`)),
         h('div', { className: 'right muted' }, `${s.rows} rows`))))),
+    renderSecurity(app),
     h('section', null,
       h('h2', null, 'Delete data'),
       h('p', { className: 'muted' }, 'Removes everything this app holds on this device. It cannot be undone.'),

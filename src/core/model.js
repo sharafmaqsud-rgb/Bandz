@@ -10,7 +10,10 @@ import { parseMoney, FormatError } from './money.js';
 export const SCHEMA_VERSION = 1;
 export const KINDS = ['income', 'spend', 'saving', 'transfer'];
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+// A date that could not be displayed would break a screen every time it opened.
+export const isIsoDate = (d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(`${d}T00:00:00Z`));
+// Own keys only: a plain object also answers to names such as 'constructor'.
+const known = (obj, key) => Object.hasOwn(obj, key);
 
 export function createState(now = Date.now()) {
   return {
@@ -23,6 +26,9 @@ export function createState(now = Date.now()) {
     transactions: {}, // fingerprint key -> transaction
     balances: {},     // 'date|account' -> balance record
     statements: {},   // 'account|date' -> which statements have been imported
+    deleted: {},      // 'accounts/key' -> when it was removed, so a sync does not bring it back
+    goalsUpdatedAt: 0,
+    meta: { lastBackupAt: null }, // about this device only, and never synced
   };
 }
 
@@ -35,8 +41,8 @@ export function addTransactions(state, rows, now = Date.now()) {
   const seen = new Map();
   let inserted = 0, skipped = 0;
   for (const r of rows) {
-    if (!state.accounts[r.account]) throw new Error(`Unknown account '${r.account}'`);
-    if (!ISO_DATE.test(r.date)) throw new Error(`Date is not ISO: '${r.date}'`);
+    if (!known(state.accounts, r.account)) throw new Error(`Unknown account '${r.account}'`);
+    if (!isIsoDate(r.date)) throw new Error(`Date is not ISO: '${r.date}'`);
     if (!Number.isInteger(r.amountPence)) throw new Error(`Amount is not whole pence: '${r.amountPence}'`);
     const currency = r.currency ?? 'GBP';
     const base = [r.account, r.date, r.description, r.amountPence, currency].join('|');
@@ -67,8 +73,8 @@ export function addTransactions(state, rows, now = Date.now()) {
 // entry on a card means it is in credit. Other accounts keep the sign as typed, so an
 // overdraft can be recorded (v1 could not).
 export function setBalance(state, date, account, text, now = Date.now()) {
-  if (!state.accounts[account]) throw new Error(`Unknown account '${account}'`);
-  if (!ISO_DATE.test(date)) throw new Error(`Date is not ISO: '${date}'`);
+  if (!known(state.accounts, account)) throw new Error(`Unknown account '${account}'`);
+  if (!isIsoDate(date)) throw new Error(`Date is not ISO: '${date}'`);
   const typed = parseMoney(text);
   if (typed === null) throw new FormatError('Balance is blank');
   const balancePence = state.accounts[account].class === 'credit' ? -typed : typed;
@@ -99,12 +105,15 @@ export function renameAccount(state, key, name, now = Date.now()) {
 
 // Remove an account and its balances. An account with transactions is refused, because
 // removing it would rewrite past months.
-export function removeAccount(state, key) {
+export function removeAccount(state, key, now = Date.now()) {
   if (Object.values(state.transactions).some((t) => t.account === key)) {
     throw new Error('This account has transactions, so it cannot be removed');
   }
   delete state.accounts[key];
-  for (const [k, b] of Object.entries(state.balances)) if (b.account === key) delete state.balances[k];
+  state.deleted[`accounts/${key}`] = now;
+  for (const [k, b] of Object.entries(state.balances)) {
+    if (b.account === key) { delete state.balances[k]; state.deleted[`balances/${k}`] = now; }
+  }
 }
 
 // Bring data saved by an earlier version of the app up to date with new fields.
@@ -112,6 +121,9 @@ export function migrate(state) {
   state.goals = { ...GOALS, ...state.goals };
   state.settings = { ...SETTINGS, ...state.settings };
   state.statements ??= {};
+  state.deleted ??= {};
+  state.goalsUpdatedAt ??= 0;
+  state.meta ??= { lastBackupAt: null };
   return state;
 }
 
@@ -119,7 +131,7 @@ export function migrate(state) {
 export function setRule(state, pattern, category, now = Date.now()) {
   const pat = pattern.trim().toUpperCase();
   if (!pat) throw new Error('Rule pattern is blank');
-  if (!state.categories[category]) throw new Error(`Unknown category '${category}'`);
+  if (!known(state.categories, category)) throw new Error(`Unknown category '${category}'`);
   const existing = state.rules.find((r) => r.pattern === pat);
   if (existing) Object.assign(existing, { category, updatedAt: now });
   else state.rules.push({ pattern: pat, category, updatedAt: now });
@@ -131,7 +143,9 @@ export function applySeed(state, seed, now = Date.now()) {
   for (const b of seed.balances ?? []) setBalance(state, b.date, b.account, b.balance, now);
   for (const r of seed.rules ?? []) setRule(state, r.pattern, r.category, now);
   for (const [name, value] of Object.entries(seed.goals ?? {})) {
-    if (!(name in state.goals)) throw new Error(`Unknown goal '${name}'`);
+    if (!known(state.goals, name)) throw new Error(`Unknown goal '${name}'`);
+    if (value !== null && !(Number.isFinite(value) && value >= 0)) throw new Error(`Goal '${name}' must be a number`);
     state.goals[name] = value;
+    state.goalsUpdatedAt = now;
   }
 }

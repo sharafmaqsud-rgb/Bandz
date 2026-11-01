@@ -4,11 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <!-- Nothing can load from or be sent to anywhere else. connect-src 'none' blocks all network calls. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; worker-src 'self'; connect-src 'none'; img-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; worker-src 'self'; manifest-src 'self'; connect-src 'none'; img-src 'self'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fcfcfb">
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1a1a19">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Finance">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Finance</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="src/ui/styles.css">
   <script type="module" src="src/app.js"></script>
 </head>

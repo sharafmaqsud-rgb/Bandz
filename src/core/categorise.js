@@ -78,9 +78,9 @@ export function pairCardRepayments(state, now = Date.now()) {
 }
 
 export function setManualCategory(state, key, category, now = Date.now()) {
-  const tx = state.transactions[key];
+  const tx = Object.hasOwn(state.transactions, key) ? state.transactions[key] : null;
   if (!tx) throw new Error(`No transaction with key '${key}'`);
-  if (!state.categories[category]) throw new Error(`Unknown category '${category}'`);
+  if (!Object.hasOwn(state.categories, category)) throw new Error(`Unknown category '${category}'`);
   tx.category = category;
   tx.catSource = 'manual';
   tx.updatedAt = now;

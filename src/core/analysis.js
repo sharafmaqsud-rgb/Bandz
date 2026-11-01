@@ -5,7 +5,7 @@ import { merchant } from './categorise.js';
 // Uncategorised money out counts as spend and money in as income, and both are counted
 // separately so they cannot hide.
 export function classify(tx, categories) {
-  const c = categories[tx.category];
+  const c = Object.hasOwn(categories, tx.category ?? '') ? categories[tx.category] : null;
   if (c) return { kind: c.kind, name: tx.category };
   return tx.amountPence < 0
     ? { kind: 'spend', name: 'Uncategorised' }

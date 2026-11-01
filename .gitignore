@@ -8,3 +8,8 @@ reference/
 # Node toolchain installed for development only
 .tools/
 node_modules/
+
+# Statements and exports must never be published, wherever they are saved
+*.pdf
+*.xlsx
+.claude/settings.local.json

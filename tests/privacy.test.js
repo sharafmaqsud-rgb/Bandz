@@ -14,7 +14,7 @@ const publishable = git('ls-files', '--cached', '--others', '--exclude-standard'
 const termsFile = join(root, 'local/banned-terms.txt');
 
 test('private folders are ignored by git', () => {
-  for (const p of ['local/seed.json', 'reference/finance-tool.zip', '.tools/node', 'backup.finbackup']) {
+  for (const p of ['local/seed.json', 'reference/finance-tool.zip', '.tools/node', 'backup.finbackup', 'statement.pdf', 'src/oops.pdf']) {
     assert.equal(git('check-ignore', p).trim(), p);
   }
   for (const f of publishable) assert.ok(!/^(local|reference|\.tools)\//.test(f), f);
@@ -39,6 +39,7 @@ test('the app makes no network requests and has a strict content policy', () => 
   const html = readFileSync(join(root, 'index.html'), 'utf8');
   assert.match(html, /default-src 'none'/);
   assert.match(html, /connect-src 'none'/);
+  assert.ok(!/unsafe-inline|unsafe-eval/.test(html));
   const code = publishable.filter((f) => f === 'index.html' || (f.startsWith('src/') && f.endsWith('.js')));
   assert.ok(code.length > 5);
   for (const f of code) {

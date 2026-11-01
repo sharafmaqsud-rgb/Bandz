@@ -129,6 +129,7 @@ function targetsSection(app, ym) {
           };
           const before = pounds(f.get('before'), 'Earlier ISA payments');
           Object.assign(state.goals, next);
+          state.goalsUpdatedAt = Date.now();
           state.settings.isaPaidBeforeImportByTaxYear[label] = before ?? 0;
           view.targetsError = null;
           view.targetsSaved = true;

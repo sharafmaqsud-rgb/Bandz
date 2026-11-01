@@ -135,7 +135,7 @@ function summarySection(app, ym) {
   const box = h('textarea', { className: 'summary', readonly: true, 'aria-label': 'Monthly summary', value: text });
   return h('section', null,
     h('h2', null, 'Summary for Claude'),
-    h('p', { className: 'muted' }, 'Copy this and paste it into a chat yourself. It holds totals and merchant names, but no account numbers.'),
+    h('p', { className: 'muted' }, 'Read this, then paste it into a chat yourself. It holds totals and merchant names, which can include people you pay, but no account numbers.'),
     box,
     h('p', null),
     h('button', {
