@@ -34,3 +34,24 @@ test('no personal terms appear in publishable files', { skip: !existsSync(termsF
     for (const term of terms) assert.ok(!text.includes(term), `A personal term appears in ${f}`);
   }
 });
+
+test('the app makes no network requests and has a strict content policy', () => {
+  const html = readFileSync(join(root, 'index.html'), 'utf8');
+  assert.match(html, /default-src 'none'/);
+  assert.match(html, /connect-src 'none'/);
+  const code = publishable.filter((f) => f === 'index.html' || (f.startsWith('src/') && f.endsWith('.js')));
+  assert.ok(code.length > 5);
+  for (const f of code) {
+    const text = readFileSync(join(root, f), 'utf8');
+    assert.ok(!/\bfetch\(|XMLHttpRequest|WebSocket|sendBeacon|EventSource|https?:\/\/(?!www\.w3\.org)/.test(text), `Network use in ${f}`);
+    assert.ok(!/innerHTML|outerHTML|insertAdjacentHTML|document\.write|\beval\(/.test(text), `Unsafe HTML or eval in ${f}`);
+  }
+});
+
+test('the bundled pdf.js is exactly the pinned package', () => {
+  for (const name of ['pdf.min.mjs', 'pdf.worker.min.mjs']) {
+    const bundled = readFileSync(join(root, 'vendor/pdfjs', name));
+    const pkg = readFileSync(join(root, 'node_modules/pdfjs-dist/legacy/build', name));
+    assert.ok(bundled.equals(pkg), name);
+  }
+});

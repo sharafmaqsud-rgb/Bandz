@@ -36,5 +36,5 @@ export function makePdf(pages) {
   out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
   out += offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('');
   out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
-  return new Uint8Array(Buffer.from(out, 'latin1')); // latin1 keeps the £ as one byte
+  return Uint8Array.from(out, (c) => c.charCodeAt(0)); // one byte per character keeps the £ intact
 }

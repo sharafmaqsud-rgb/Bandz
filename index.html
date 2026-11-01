@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- Nothing can load from or be sent to anywhere else. connect-src 'none' blocks all network calls. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; worker-src 'self'; connect-src 'none'; img-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fcfcfb">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1a1a19">
+  <title>Finance</title>
+  <link rel="stylesheet" href="src/ui/styles.css">
+  <script type="module" src="src/app.js"></script>
+</head>
+<body>
+  <main id="screen"></main>
+  <nav id="tabs" aria-label="Screens"></nav>
+</body>
+</html>

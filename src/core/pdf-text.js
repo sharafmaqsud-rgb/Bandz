@@ -6,6 +6,7 @@ export async function extractPages(pdfjs, bytes) {
   const task = pdfjs.getDocument({
     data: bytes,
     isEvalSupported: false, // never run code generated from a file's contents
+    disableFontFace: true,  // only text is needed, so no fonts are ever loaded
     verbosity: 0,
   });
   const doc = await task.promise;

@@ -229,7 +229,7 @@ test('a card repayment is recognised by its amount, however the bank words it', 
     row('lloyds-club', '2026-09-01', 'XYZ OLD THING', -7000),       // too far away in time
   ]);
   applyRules(s);
-  assert.equal(pairCardRepayments(s), 2);
+  assert.equal(pairCardRepayments(s).length, 2);
   const cat = (d) => Object.values(s.transactions).find((t) => t.description === d).category;
   const paired = Object.values(s.transactions).filter((t) => t.account === 'lloyds-club' && t.category === 'Card repayment');
   assert.equal(paired.length, 1);

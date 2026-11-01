@@ -22,6 +22,7 @@ export function createState(now = Date.now()) {
     goals: structuredClone(GOALS),
     transactions: {}, // fingerprint key -> transaction
     balances: {},     // 'date|account' -> balance record
+    statements: {},   // 'account|date' -> which statements have been imported
   };
 }
 

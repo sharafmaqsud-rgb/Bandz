@@ -8,7 +8,8 @@
     "node": "26.13.0"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "serve": "node tools/serve.mjs"
   },
   "dependencies": {
     "pdfjs-dist": "6.4.299"

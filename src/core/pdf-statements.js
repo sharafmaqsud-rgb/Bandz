@@ -310,11 +310,14 @@ export function importStatement(state, parsed, now = Date.now()) {
   }
   const counts = addTransactions(state, parsed.rows, now);
   applyRules(state, now);
-  counts.unpairedCardPayments = pairCardRepayments(state, now);
+  counts.unpairedCardPayments = pairCardRepayments(state, now).length;
   const { date, closingBalancePence } = parsed.statement;
   const key = `${date}|${parsed.account}`;
   if (!state.balances[key]) {
     state.balances[key] = { date, account: parsed.account, balancePence: closingBalancePence, updatedAt: now };
   }
+  state.statements[`${parsed.account}|${date}`] = {
+    account: parsed.account, date, rows: parsed.rows.length, sourceFile: parsed.rows[0]?.sourceFile ?? null, updatedAt: now,
+  };
   return counts;
 }

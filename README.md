@@ -4,8 +4,18 @@ One private place for your whole financial position, how you are tracking agains
 goals, and where to optimise. It runs on your own devices, makes no model calls, and
 cannot move money or place trades. Every insight is plain rules and arithmetic.
 
-**Status: Phase 1 ready for review.** Importing, categorising and checking statements works
-and is tested. There are no screens yet, so for now it runs from the command line.
+**Status: Phase 2 ready for review.** The Overview, Spending, Accounts and Import screens
+work on this Mac. Goals and insights come in Phase 3, and installing on your phone in Phase 4.
+
+## Running the app
+
+```bash
+.tools/node/bin/node tools/serve.mjs
+```
+
+Then open http://localhost:8123. The server only hands files to your browser and only
+listens on this Mac. Your data is saved inside whichever browser you use, so another browser
+starts empty. It is not encrypted until the passphrase lock arrives in Phase 4.
 
 ## What stays private
 
@@ -63,7 +73,14 @@ prints check results and counts only, never your transactions.
 | `src/core/csv.js` | Reads CSV files, for investment exports later. No bank uses it at the moment. |
 | `src/core/pdf-text.js` | Pulls positioned text out of a PDF using pdf.js. |
 | `src/core/pdf-statements.js` | Rebuilds each bank's table from that text, checks it, and imports it. |
-| `src/core/analysis.js` | Monthly income, spend and saved totals. More arrives in Phase 3. |
+| `src/core/analysis.js` | Every number: monthly totals, changes, net worth, data gaps. Goals and insights arrive in Phase 3. |
+| `src/store.js` | Saves the data in the browser's private storage. |
+| `src/app.js` | Starts the app, switches screens and saves after each change. |
+| `src/ui/*.js` | One file per screen, plus `dom.js` helpers that insert all text safely. |
+| `src/ui/styles.css` | Layout and the light and dark colours. |
+| `vendor/pdfjs/` | The bundled copy of pdf.js. A test checks it matches the pinned package. |
+| `tools/serve.mjs` | The development server. It refuses to serve your private folders. |
+| `tests/analysis.test.js` | Tests for the numbers shown on the screens. |
 | `src/core/defaults.js` | Starting categories, generic merchant rules, accounts and thresholds. |
 | `src/core/categorise.js` | Matches descriptions to categories, and derives a short merchant name. |
 | `src/core/model.js` | The data itself: transactions, balances, rules, goals and duplicate-safe import. |
@@ -108,6 +125,12 @@ Both come from the v1 fingerprint:
 - If a bank changes a description between exports, that row is imported again. The
   duplicate-charge insight is there to help you spot this.
 
+## How complete a month is
+
+Card statements rarely end on the last day of a month. A month's figures only include what
+has been imported, so the app says "Incomplete" and names where each statement stops.
+Importing the next statement fills the gap.
+
 ## Differences from v1
 
 - **PDF import replaces CSV import.** Your banks' statements are read as PDFs, and each one
@@ -125,18 +148,23 @@ Both come from the v1 fingerprint:
 
 ## Metric definitions
 
-These carry over from v1 and will be built in Phases 2 and 3. Each is labelled "calculated"
-or "estimate" in the app.
+Each is labelled "calculated" or "estimate" in the app. Cash buffer, ISA contributions and
+recurring charges are defined here and arrive on screen in Phase 3.
 
 | Metric | Definition | Label |
 |---|---|---|
 | Income | Money in, in `income` categories, plus uncategorised money in | Calculated |
 | Spend | Money out in `spend` categories, net of refunds, plus uncategorised money out | Calculated |
 | Saved | Payments to `saving` categories | Calculated |
+| Left over | Income minus spend minus saved. Negative means more went out than came in. | Calculated |
+| Essential spending | Spend in categories marked essential | Calculated |
+| Share of spending | One category divided by the month's total spend | Calculated |
+| Change on last month | This month's category total minus the calendar month before. Left out when that month has no data. | Calculated |
 | Savings and investing rate | Saved divided by income. Payroll pension contributions never reach your bank, so they are not included. | Calculated |
 | Cash buffer | (Cash balances minus card balances owed) divided by average monthly essential spend over the last three months | Calculated |
 | ISA contributions | Payments categorised `ISA contribution` since 6 April, plus anything you enter as paid before your first import | Calculated |
-| Net worth | Latest balance of every account, added together, with card balances counting as negative. A balance recorded up to 7 days after month end counts towards that month. | Calculated |
+| Net worth | Latest balance of every account, added together, with card balances counting as negative. Accounts with no balance are listed as missing, not counted as zero. | Calculated |
+| Investments | Investment and crypto accounts together | Calculated |
 | Recurring charge | Same merchant at a steady amount (within 15%) in at least 3 of the last 6 months | Estimate |
 | Annualised cost | Monthly recurring amount times 12 | Estimate |
 

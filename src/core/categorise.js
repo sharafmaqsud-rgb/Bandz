@@ -52,12 +52,12 @@ const PAIR_WINDOW_DAYS = 10;
 // transfer, whatever wording the bank used for it. So each card payment is matched to a
 // current-account payment of exactly the same amount within 10 days. Only uncategorised
 // rows can be claimed, so a shop purchase of the same amount is never reclassified.
-// Returns the number of card payments still without a match.
+// Returns the card payments still without a match.
 export function pairCardRepayments(state, now = Date.now()) {
   const txs = Object.values(state.transactions);
   const classOf = (t) => state.accounts[t.account].class;
   const used = new Set();
-  let unpaired = 0;
+  const unpaired = [];
   const payments = txs.filter((t) => classOf(t) === 'credit' && t.amountPence > 0 && t.category === 'Card repayment');
   for (const pay of payments) {
     const candidates = txs
@@ -68,7 +68,7 @@ export function pairCardRepayments(state, now = Date.now()) {
       .sort((a, b) => (b.category !== null) - (a.category !== null)
         || Math.abs(dayNumber(a.date) - dayNumber(pay.date)) - Math.abs(dayNumber(b.date) - dayNumber(pay.date)));
     const match = candidates[0];
-    if (!match) { unpaired++; continue; }
+    if (!match) { unpaired.push(pay); continue; }
     used.add(match.key);
     if (match.category === null) {
       Object.assign(match, { category: 'Card repayment', catSource: 'paired', updatedAt: now });
