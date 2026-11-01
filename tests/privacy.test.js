@@ -44,7 +44,7 @@ test('the app makes no network requests and has a strict content policy', () => 
   assert.ok(code.length > 5);
   for (const f of code) {
     const text = readFileSync(join(root, f), 'utf8');
-    assert.ok(!/\bfetch\(|XMLHttpRequest|WebSocket|sendBeacon|EventSource|https?:\/\/(?!www\.w3\.org)/.test(text), `Network use in ${f}`);
+    assert.ok(!/\bfetch\(|XMLHttpRequest|WebSocket|sendBeacon|EventSource|https?:\/\/(?!www\.w3\.org|schemas\.openxmlformats\.org)/.test(text), `Network use in ${f}`);
     assert.ok(!/innerHTML|outerHTML|insertAdjacentHTML|document\.write|\beval\(/.test(text), `Unsafe HTML or eval in ${f}`);
   }
 });

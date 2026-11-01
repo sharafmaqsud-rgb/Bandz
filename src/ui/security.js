@@ -1,7 +1,7 @@
 // Backup, sync between devices, and the passphrase lock.
 import { BACKUP_FORMAT, MIN_PASSPHRASE, checkPassphrase, createKey, seal, unseal } from '../core/crypto.js';
 import { syncFrom } from '../core/merge.js';
-import { fullDate, h, notice } from './dom.js';
+import { deliver, fullDate, h, notice } from './dom.js';
 
 const MAX_BACKUP_BYTES = 100 * 1024 * 1024;
 
@@ -38,26 +38,6 @@ const message = (view, id) => {
   const m = view.securityMessage;
   return m?.id === id ? notice(m.kind, m.title, h('p', null, m.text)) : null;
 };
-
-// iPhones save through the share sheet, which offers Files, iCloud Drive and AirDrop. Other
-// browsers download the file. Returns false if you cancelled, so no backup is recorded.
-async function deliver(file) {
-  if (navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file] });
-      return true;
-    } catch (err) {
-      if (err.name === 'AbortError') return false;
-    }
-  }
-  const url = URL.createObjectURL(file);
-  const link = h('a', { href: url, download: file.name });
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
-  return true;
-}
 
 function backupSection(app) {
   const { state, view } = app;
@@ -132,47 +112,29 @@ function backupSection(app) {
 
 function lockSection(app) {
   const { view } = app;
-  if (app.lock) {
-    return h('section', null,
-      h('h2', null, 'Passphrase lock'),
-      h('p', null, '✓ On. Your data is encrypted on this device.'),
-      h('p', { className: 'muted' }, 'It locks by itself after 5 minutes away or idle.'),
-      message(view, 'lock-off'),
-      h('p', null, h('button', { onClick: () => location.reload() }, 'Lock now')),
-      h('details', { className: 'more' },
-        h('summary', null, h('span', null, 'Turn off the lock')),
-        securityForm(app, {
-          id: 'lock-off',
-          submit: 'Turn off',
-          children: [passwordField('Current passphrase', 'pass', 'current-password')],
-          onSubmit: async (f) => {
-            await app.verifyLock(f.get('pass'));
-            app.lock = null;
-            return { title: 'Lock turned off', text: 'Your data is no longer encrypted on this device.' };
-          },
-        })));
-  }
   return h('section', null,
     h('h2', null, 'Passphrase lock'),
-    h('p', { className: 'muted' }, 'Off. Your data is held in this browser unencrypted, and is only as protected as this device.'),
-    message(view, 'lock-off'),
+    h('p', null, '✓ On. Your data is encrypted on this device.'),
+    h('p', { className: 'muted' }, 'It locks itself after 2 minutes away or idle.'),
+    h('p', null, h('button', { onClick: () => location.reload() }, 'Lock now')),
     h('details', { className: 'more' },
-      h('summary', null, h('span', null, 'Turn on the lock')),
+      h('summary', null, h('span', null, 'Change your passphrase')),
       securityForm(app, {
-        id: 'lock-on',
-        submit: 'Turn on',
+        id: 'change-pass',
+        submit: 'Change passphrase',
         children: [
+          passwordField('Current passphrase', 'current', 'current-password'),
           passwordField(`New passphrase, at least ${MIN_PASSPHRASE} characters`, 'pass', 'new-password'),
           passwordField('Type it again', 'again', 'new-password'),
-          notice('attention', 'There is no recovery', h('p', null, 'If you forget this passphrase, the data on this device is gone. Keep an up-to-date backup.')),
-          message(view, 'lock-on'),
+          message(view, 'change-pass'),
         ],
         onSubmit: async (f) => {
+          await app.verifyLock(f.get('current'));
           const pass = f.get('pass');
           checkPassphrase(pass);
-          if (pass !== f.get('again')) throw new Error('The two passphrases do not match.');
+          if (pass !== f.get('again')) throw new Error('The two new passphrases do not match.');
           app.lock = await createKey(pass);
-          return { title: 'Lock turned on', text: 'Your data is now encrypted on this device.' };
+          return { title: 'Passphrase changed', text: 'Backups you already made still use the passphrase they were made with.' };
         },
       })));
 }
@@ -181,7 +143,7 @@ export const renderSecurity = (app) => [backupSection(app), lockSection(app)];
 
 // The screen shown instead of the app while it is locked.
 export function renderLockScreen({ onUnlock, onReset, error, busy }) {
-  return [
+  return [h('div', { className: 'lock-screen' },
     h('h1', null, 'Finance is locked'),
     h('form', {
       className: 'goal-form',
@@ -197,6 +159,23 @@ export function renderLockScreen({ onUnlock, onReset, error, busy }) {
       h('button', {
         className: 'danger',
         onClick: () => { if (window.confirm('Delete all finance data on this device? This cannot be undone.')) onReset(); },
-      }, 'Delete all data')),
-  ];
+      }, 'Delete all data')))];
+}
+
+// The first screen on a new device, or for data saved before the passphrase was required.
+export function renderSetupScreen({ onCreate, error, busy }) {
+  return [h('div', { className: 'lock-screen' },
+    h('h1', null, 'Create your passphrase'),
+    h('section', { className: 'card' },
+      h('p', null, 'This encrypts your finances on this device, and you will need it each time the app opens.'),
+      h('form', {
+        className: 'goal-form',
+        novalidate: true,
+        onSubmit: (e) => { e.preventDefault(); const f = new FormData(e.target); onCreate(f.get('pass'), f.get('again')); },
+      },
+      passwordField(`Passphrase, at least ${MIN_PASSPHRASE} characters`, 'pass', 'new-password'),
+      passwordField('Type it again', 'again', 'new-password'),
+      notice('attention', 'There is no recovery', h('p', null, 'If you forget it, the data on this device is gone. Write it down somewhere safe, and keep a backup.')),
+      error && h('p', { role: 'alert' }, `✕ ${error}`),
+      h('button', { className: 'primary', type: 'submit', disabled: busy }, busy ? 'Encrypting…' : 'Create and continue'))))];
 }

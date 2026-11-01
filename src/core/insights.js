@@ -202,11 +202,20 @@ export function bufferStatus(state, ym) {
   };
 }
 
-// Net worth at each date a balance was recorded, carrying other accounts forward. Accounts
-// only join the total from their first balance, so an early jump can just mean a new entry.
+// Net worth at each date a balance was recorded, carrying other accounts forward. Before an
+// account's first balance it is assumed to have held that same amount. Otherwise, entering an
+// existing account for the first time would look like money appearing from nowhere.
 export function netWorthSeries(state) {
-  const dates = [...new Set(Object.values(state.balances).map((b) => b.date))].sort();
-  return dates.map((date) => ({ date, pence: netWorth(state, date).total }));
+  const records = Object.values(state.balances).sort((a, b) => a.date.localeCompare(b.date));
+  const first = new Map();
+  for (const b of records) if (!first.has(b.account)) first.set(b.account, b.balancePence);
+  const dates = [...new Set(records.map((b) => b.date))];
+  return dates.map((date) => {
+    const latest = balancesAsOf(state, date);
+    let pence = 0;
+    for (const [account, opening] of first) pence += latest[account]?.balancePence ?? opening;
+    return { date, pence };
+  });
 }
 
 // A target of null means none is set, so nothing can pass or fail.

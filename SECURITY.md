@@ -14,7 +14,7 @@ This is a plain account of what protects your data and what does not.
 
 ## Encryption
 
-Backups are always encrypted. The lock is optional, and encrypts your data on the device.
+Backups are always encrypted, and a passphrase is required to use the app, so your data is always encrypted on the device.
 
 - AES-256-GCM, which also detects any change to the file.
 - The key is stretched from your passphrase with PBKDF2-SHA256 at 600,000 rounds. Web Crypto
@@ -27,9 +27,9 @@ Backups are always encrypted. The lock is optional, and encrypts your data on th
 |---|---|
 | **Lost passphrase** | There is no recovery. Keep a backup, and keep its passphrase safe. |
 | **Unlocked app** | The lock protects data at rest. While open, anyone holding the device can see it. |
-| **App switcher** | iOS may show a snapshot of the last screen. |
-| **Turning the lock on later** | The old unencrypted copy is overwritten, but may linger on disk for a while. Turn the lock on before importing, if this matters to you. |
-| **Lock off** | Data is only as protected as the device. Use FileVault and an iPhone passcode. |
+| **App switcher** | The app hides its screen when in the background, but iOS may take its snapshot first. |
+| **Exported reports** | PDF and Excel files are not encrypted. The app warns you before making one. |
+| **Data from before the lock was required** | The old unencrypted copy is overwritten, but may linger on disk for a while. |
 | **iPhone storage** | iOS can clear a web app's data. Your latest backup is the safe copy. |
 | **Clipboard** | A copied Claude summary stays on the clipboard until replaced. It can name people you pay. |
 | **What you paste into Claude** | Pasting a summary shares it, by your choice. |
@@ -66,6 +66,16 @@ Reviewed by reading each area of the code and testing it, not by an outside audi
 | A failure opening data led to an empty app, whose next save could overwrite your real data | High | Fixed |
 | A statement saved in the repo folder could be published by `git add` | Medium | Fixed, ignored and tested |
 | Shared origin on GitHub Pages | Medium | Documented above, needs your care |
+
+Later review of the Phase 5 additions, by the same method:
+
+| Area | Result |
+|---|---|
+| Excel export | Statement text is always stored as text, so a merchant name cannot run as a formula. Tested. |
+| PDF export | Text is escaped, and characters the font lacks are replaced. Tested. |
+| Learning from your choices | It reads only your own decisions, and the code holds no personal names. |
+| Exported files | Not encrypted, so the app warns first. |
+| Required passphrase | Older unencrypted data is encrypted before the app opens. Tested. |
 
 **Checked with no finding:** personal terms and balances across the full git history, inline
 scripts or styles, `innerHTML` and `eval`, plaintext in backups and locked storage, requests to

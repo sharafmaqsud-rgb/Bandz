@@ -4,7 +4,7 @@ import { applyRules } from '../core/categorise.js';
 import { FUNDING_PATTERNS } from '../core/defaults.js';
 import { addAccount, removeAccount, renameAccount, setBalance, setRule } from '../core/model.js';
 import { formatPence } from '../core/money.js';
-import { fullDate, h, money, today } from './dom.js';
+import { fullDate, h, money, setTheme, today } from './dom.js';
 
 const SECTIONS = [
   ['Cash', ['cash']],
@@ -23,6 +23,11 @@ export function renderAccounts(app) {
       Object.entries(state.accounts).filter(([, a]) => classes.includes(a.class))
         .map(([key, account]) => accountRow(app, key, account, latest[key])),
       title === 'Pension' && addPension(app))),
+    h('section', null,
+      h('h2', null, 'Appearance'),
+      h('label', { className: 'check' },
+        h('input', { type: 'checkbox', checked: document.documentElement.dataset.theme === 'dark', onChange: (e) => setTheme(e.target.checked ? 'dark' : 'light') }),
+        'Dark mode')),
   ];
 }
 

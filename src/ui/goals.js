@@ -5,6 +5,7 @@ import { bufferStatus, isaStatus, meets, monthlyMeasures, netWorthSeries, taxYea
 import { formatPence, parseMoney } from '../core/money.js';
 import { lineChart } from './chart.js';
 import { calculated, estimated, fullDate, h, money, monthName, notice, percent, row, svg, today } from './dom.js';
+import { ring } from './viz.js';
 
 // Status is always an icon and a word, never colour alone.
 function status(met, { yes = 'On target', no = 'Below target' } = {}) {
@@ -26,8 +27,11 @@ function isaSection(state, ym) {
   const scale = Math.max(1, isa.target ?? 0, ...months.map((m) => m.isa));
   return h('section', null,
     h('h2', null, `ISA allowance ${isa.label}`, calculated()),
-    h('div', { className: 'big' }, money(isa.paid), h('span', { className: 'muted' }, ` of ${formatPence(isa.allowance)}`)),
-    progress(isa.paid / isa.allowance),
+    h('div', { className: 'ring-row' },
+      ring(isa.paid / isa.allowance, percent(isa.paid / isa.allowance), `ISA allowance ${percent(isa.paid / isa.allowance)} used`),
+      h('div', null,
+        h('div', { className: 'big' }, money(isa.paid)),
+        h('div', { className: 'muted' }, `of ${formatPence(isa.allowance)}`))),
     h('div', { className: 'rows' },
       row('Allowance left', money(isa.remaining)),
       row('Full months left before 5 April', String(isa.monthsLeft)),

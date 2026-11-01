@@ -2,9 +2,12 @@
 import { categoryChanges, classify, inMonth, leftOver, monthGaps, monthsWithData, savingsRate, shiftMonth, summarise } from '../core/analysis.js';
 import { setManualCategory } from '../core/categorise.js';
 import { formatPence } from '../core/money.js';
+import { pounds, spendingPace } from '../core/highlights.js';
 import { buildInsights } from '../core/insights.js';
+import { toSlices } from '../core/palette.js';
 import { monthlySummary } from '../core/summary.js';
 import { calculated, categorySelect, dayName, estimated, h, money, monthName, notice, percent, row, svg } from './dom.js';
+import { card, countUp, donut, paceChart } from './viz.js';
 
 // The change is written in words with an arrow, never shown by colour alone.
 function changeText(change) {
@@ -14,11 +17,11 @@ function changeText(change) {
   return change > 0 ? `▲ ${amount} more than last month` : `▼ ${amount} less than last month`;
 }
 
-function bar(share) {
+function bar(share, hue) {
   // A viewBox of 0-100 makes the width a percentage, and it needs no inline style,
   // which the content policy forbids.
   const width = Math.max(share * 100, share > 0 ? 1 : 0);
-  return svg('svg', { className: 'bar-track', viewBox: '0 0 100 8', preserveAspectRatio: 'none', 'aria-hidden': 'true' },
+  return svg('svg', { className: `bar-track ${hue < 0 ? 's-none' : `s${hue + 1}`}`, viewBox: '0 0 100 8', preserveAspectRatio: 'none', 'aria-hidden': 'true' },
     svg('rect', { x: 0, y: 0, width, height: 8, rx: 1 }));
 }
 
@@ -64,6 +67,9 @@ export function renderSpending(app) {
   const changes = categoryChanges(s, prev);
   const largest = Math.max(1, ...changes.map((c) => c.pence));
   const rate = savingsRate(s);
+  const slices = toSlices(changes.map((c) => ({ name: c.name, pence: c.pence })));
+  const hueOf = (name) => slices.find((x) => x.name === name)?.hue ?? -1;
+  const pace = spendingPace(state, ym);
 
   const go = (step) => () => { view.month = months[at + step]; view.openCategory = null; app.render(); };
   const ofKind = (kind) => rows.filter((t) => classify(t, state.categories).kind === kind).sort(byDate);
@@ -76,7 +82,10 @@ export function renderSpending(app) {
       h('button', { 'aria-label': 'Next month', disabled: at === months.length - 1, onClick: go(1) }, '›')),
     h('section', { className: 'hero' },
       h('div', { className: 'label' }, 'Spent', calculated()),
-      h('div', { className: 'value' }, money(s.spend))),
+      h('div', { className: 'value' }, countUp(s.spend, app))),
+    card('Where it went', donut(changes.map((c) => ({ name: c.name, pence: c.pence })), s.spend)),
+    card('Spending through the month', paceChart(pace),
+      pace.projected !== null && h('p', { className: 'muted' }, `On this pace, about ${pounds(pace.projected)} by month end.`, estimated())),
     gaps.length > 0 && notice('attention', 'Incomplete month',
       h('ul', null, gaps.map((g) => h('li', null,
         g.through ? `${g.name} runs to ${dayName(g.through)}.` : `${g.name} has no statement yet.`)))),
@@ -95,7 +104,7 @@ export function renderSpending(app) {
         },
         h('summary', null,
           h('div', { className: 'bar-head' }, h('span', null, c.name), money(c.pence)),
-          bar(c.pence / largest),
+          bar(c.pence / largest, hueOf(c.name)),
           h('div', { className: 'bar-foot' },
             h('span', null, changeText(c.change)),
             h('span', { className: 'num' }, s.spend > 0 ? percent(c.pence / s.spend) : ''))),

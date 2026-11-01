@@ -140,12 +140,15 @@ test('monthly measures hold the last six months in order', () => {
   assert.equal(m[2].isa, 150000);
 });
 
-test('the net worth trend carries balances forward', () => {
+test('the net worth trend is like for like', () => {
   const s = createState();
   setBalance(s, '2026-09-30', 'revolut', '100');
   setBalance(s, '2026-10-31', 'vanguard-isa', '1000');
   setBalance(s, '2026-10-31', 'amex-gold', '50');
-  assert.deepEqual(netWorthSeries(s), [{ date: '2026-09-30', pence: 10000 }, { date: '2026-10-31', pence: 105000 }]);
+  // Entering an account for the first time is not a rise, so both points include all three.
+  assert.deepEqual(netWorthSeries(s), [{ date: '2026-09-30', pence: 105000 }, { date: '2026-10-31', pence: 105000 }]);
+  setBalance(s, '2026-11-30', 'vanguard-isa', '1100');
+  assert.equal(netWorthSeries(s).at(-1).pence, 115000);
 });
 
 test('the summary is plain text, labelled, and leaves out private detail', () => {

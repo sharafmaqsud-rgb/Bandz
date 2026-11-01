@@ -9,6 +9,7 @@ import { parseStatement, importStatement } from '../src/core/pdf-statements.js';
 import { createState, applySeed } from '../src/core/model.js';
 import { classify } from '../src/core/analysis.js';
 import { reviewQueue } from '../src/core/review.js';
+import { availablePeriods, balanceSheet, cashFlow } from '../src/core/statements.js';
 import { maskText } from './mask.js';
 
 const seedPath = new URL('../local/seed.json', import.meta.url);
@@ -21,6 +22,10 @@ const printQueue = () => {
   const reasons = {};
   for (const t of Object.values(state.transactions)) if (t.reason) reasons[t.reason.replace(/\(.*\)/, '')] = (reasons[t.reason.replace(/\(.*\)/, '')] ?? 0) + 1;
   console.log(reasons);
+  for (const p of availablePeriods(state).filter((x) => x.kind === 'month')) {
+    const c = cashFlow(state, p), b = balanceSheet(state, p);
+    console.log(`${p.label}: cash flow reconciled ${c.reconciled}, balance sheet adds up ${b.netWorth === b.totalAssets - b.totalDebts}, missing balances ${b.missing.length}`);
+  }
 };
 
 for (const path of process.argv.slice(2)) {

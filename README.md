@@ -4,8 +4,9 @@ One private place for your whole financial position, how you are tracking agains
 goals, and where to optimise. It runs on your own devices, makes no model calls, and
 cannot move money or place trades. Every insight is plain rules and arithmetic.
 
-**Status: Phase 4 ready for review.** All five screens, encrypted backup and sync, the
-passphrase lock and offline use all work. See `SECURITY.md` for what is and is not protected.
+**Status: complete apart from optional API connectors.** All screens, automatic categorising,
+highlights, statements, exports, encrypted backup and sync, the required passphrase and offline
+use all work. See `SECURITY.md` for what is and is not protected.
 
 ## Running the app
 
@@ -15,7 +16,7 @@ passphrase lock and offline use all work. See `SECURITY.md` for what is and is n
 
 Then open http://localhost:8123. The server only hands files to your browser and only
 listens on this Mac. Your data is saved inside whichever browser you use, so another browser
-starts empty. It is only encrypted if you turn on the passphrase lock, on the Import screen.
+starts empty. A passphrase is required, so your data there is always encrypted.
 
 ## Using it on your iPhone
 
@@ -107,12 +108,17 @@ prints check results and counts only, never your transactions.
 | `src/core/analysis.js` | Monthly totals, changes, net worth and data gaps. |
 | `src/core/insights.js` | Goal measures and every optimisation rule. |
 | `src/core/summary.js` | The plain-text summary to paste into a Claude chat. |
+| `src/core/merchants.js`, `src/core/review.js` | Known merchants and hint words, and what the app asks you about. |
+| `src/core/highlights.js`, `src/core/palette.js` | The story of a period, and the checked chart colours. |
+| `src/core/statements.js` | The income statement, balance sheet and cash flow. |
+| `src/core/report-pdf.js`, `src/core/report-xlsx.js`, `src/core/xlsx.js` | Create the PDF and Excel reports on your device, with no library. |
 | `src/core/crypto.js` | Passphrase encryption for backups and the lock. |
 | `src/core/merge.js` | Checks a backup is valid, then combines it with this device's data. |
 | `src/store.js` | Saves the data in the browser's private storage. |
 | `src/pwa.js`, `sw.js`, `manifest.webmanifest` | Make the app installable and offline. `sw.js` holds code only, never your data. |
 | `SECURITY.md` | What is protected, what is not, and the security review. |
 | `src/app.js` | Starts the app, switches screens and saves after each change. |
+| `src/ui/viz.js`, `src/ui/chart.js` | The charts, drawn as SVG with no library. |
 | `src/ui/*.js` | One file per screen, plus `dom.js` helpers that insert all text safely. |
 | `src/ui/styles.css` | Layout and the light and dark colours. |
 | `vendor/pdfjs/` | The bundled copy of pdf.js. A test checks it matches the pinned package. |
@@ -154,6 +160,30 @@ prints check results and counts only, never your transactions.
 - **Dates on cards:** the transaction date is used, not the date the bank processed it. Card
   rows print no year, so it comes from the statement date.
 - **Foreign card spending:** the sterling amount the bank charged is used.
+
+### The three statements
+
+On the Reports screen, next to Highlights, for any month or tax year. All figures are calculated.
+
+| Statement | What it shows |
+|---|---|
+| Income statement | Income minus essential and other spending gives the surplus. Saving comes after that, because it is a use of money, not a cost. Payroll pension contributions never reach your bank, so they are not shown. |
+| Balance sheet | Each account's latest balance up to 7 days after the period ends. Assets minus cards gives net worth. Accounts with no balance are named as missing. |
+| Cash flow | Actual money through the accounts you import. Card purchases only count once the card is paid. Opening cash plus the net change must equal the closing balance on your statement, and any difference is shown. |
+
+Investment growth on the balance sheet is an estimate: the rise in value not explained by
+money paid in.
+
+### Highlights and exports
+
+Highlights tell the story of a period in sentences, under Going well, Worth watching and What to
+do next. They come from fixed rules, with no AI model, and every figure is labelled calculated or
+estimate. A target you have not set is never judged against.
+
+The PDF is a designed summary with charts and highlights. The Excel workbook holds the three
+statements and every transaction, with real formulas so you can check anything. Exported files
+are not encrypted, and the app warns you first. A Mac downloads them directly. An iPhone uses the
+share sheet, which offers Save to Files.
 
 ### How payments get filed
 
@@ -211,7 +241,9 @@ Importing the next statement fills the gap.
 
 ## Metric definitions
 
-Each is labelled "calculated" or "estimate" in the app. Until you set a target, a measure is
+Everything updates instantly when you import, recategorise or change a balance. New data still
+comes from your statements and the balances you enter, not from a live bank connection. Each is
+labelled "calculated" or "estimate" in the app. Until you set a target, a measure is
 shown with no pass or fail.
 
 | Metric | Definition | Label |
@@ -223,12 +255,14 @@ shown with no pass or fail.
 | Essential spending | Spend in categories marked essential | Calculated |
 | Share of spending | One category divided by the month's total spend | Calculated |
 | Change on last month | This month's category total minus the calendar month before. Left out when that month has no data. | Calculated |
+| Spending pace projection | Spending so far, divided by days covered, times days in the month | Estimate |
 | Savings and investing rate | Saved divided by income. Payroll pension contributions never reach your bank, so they are not included. | Calculated |
 | Cash buffer | (Cash balances minus card balances owed) divided by average monthly essential spend over this month and up to two before it. Uncategorised spending is not essential, so categorise first or this reads high. | Calculated |
 | ISA contributions | Payments categorised `ISA contribution` since 6 April, plus anything you enter as paid before your first import | Calculated |
 | Monthly amount to use the allowance | Allowance left divided by full months left before 5 April | Calculated |
 | ISA paid in by 5 April at your target | Paid so far plus your monthly target for each full month left | Estimate |
-| Net worth trend | Net worth on each date a balance was recorded, carrying other accounts forward. An account joins from its first balance, so adding one shows as a rise. | Calculated |
+| Net worth trend | Net worth on each date a balance was recorded, carrying other accounts forward. Before an account's first balance it is assumed to have held that amount, so entering one is not shown as a rise. | Calculated |
+| Net worth change | The movement across accounts with a balance at both ends of the period | Calculated |
 | Net worth | Latest balance of every account, added together, with card balances counting as negative. Accounts with no balance are listed as missing, not counted as zero. | Calculated |
 | Investments | Investment and crypto accounts together | Calculated |
 | Recurring charge | Same merchant at a steady amount (within 15%) in at least 3 of the last 6 months | Estimate |

@@ -3,7 +3,7 @@
 import { formatPence } from '../core/money.js';
 import { fullDate, h, svg } from './dom.js';
 
-const W = 340, H = 170;
+const H = 170;
 const PAD = { left: 8, right: 8, top: 10, bottom: 20 };
 
 const compact = (pence) => {
@@ -12,6 +12,8 @@ const compact = (pence) => {
 };
 
 export function lineChart(points, label) {
+  // Drawn wider on wide screens, rather than scaled up, so the text stays a normal size.
+  const W = window.innerWidth >= 900 ? 860 : 340;
   const times = points.map((p) => Date.parse(`${p.date}T00:00:00Z`));
   const values = points.map((p) => p.pence);
   const low = Math.min(...values), high = Math.max(...values);
@@ -49,6 +51,7 @@ export function lineChart(points, label) {
       svg('line', { className: 'grid', x1: PAD.left, x2: W - PAD.right, y1: y(v), y2: y(v) }),
       svg('text', { x: PAD.left, y: y(v) - 4 }, compact(v)),
     ]),
+    svg('path', { className: 'area', d: `${coords.map((c, i) => `${i ? 'L' : 'M'}${c.x.toFixed(1)} ${c.y.toFixed(1)}`).join(' ')} L${last.x.toFixed(1)} ${H - PAD.bottom} L${coords[0].x.toFixed(1)} ${H - PAD.bottom} Z` }),
     svg('path', { className: 'line', d: coords.map((c, i) => `${i ? 'L' : 'M'}${c.x.toFixed(1)} ${c.y.toFixed(1)}`).join(' ') }),
     cross, dot,
     svg('text', { x: PAD.left, y: H - 5 }, fullDate(points[0].date)),

@@ -128,6 +128,15 @@ export function migrate(state) {
   state.settings = { ...SETTINGS, ...state.settings };
   state.statements ??= {};
   state.deleted ??= {};
+  // The student loan was in a test build only, and was taken out at your request.
+  if (state.accounts['student-loan']) {
+    delete state.accounts['student-loan'];
+    for (const [k, b] of Object.entries(state.balances)) if (b.account === 'student-loan') delete state.balances[k];
+  }
+  // New standard accounts appear for existing users, unless they removed them.
+  for (const [key, account] of Object.entries(ACCOUNTS)) {
+    if (!Object.hasOwn(state.accounts, key) && !state.deleted[`accounts/${key}`]) state.accounts[key] = structuredClone(account);
+  }
   state.goalsUpdatedAt ??= 0;
   state.meta ??= { lastBackupAt: null };
   return state;

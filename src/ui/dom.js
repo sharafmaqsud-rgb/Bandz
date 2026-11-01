@@ -71,3 +71,41 @@ export function categorySelect(state, { label, value = '', placeholder = 'Choose
     Object.entries(state.categories).filter(([, c]) => c.kind === kind)
       .map(([name]) => h('option', { value: name, selected: name === value }, name)))));
 }
+
+// An iPhone or iPad has no downloads folder to save straight into, so it uses the share sheet.
+// Everything else, including a Mac, downloads directly, even if it could offer sharing.
+// iPads can report themselves as Macs, so a touch screen is what tells them apart.
+export function usesShareSheet(nav) {
+  const ios = /iPhone|iPad|iPod/.test(nav.userAgent) || (/Macintosh/.test(nav.userAgent) && nav.maxTouchPoints > 1);
+  return ios && Boolean(nav.canShare);
+}
+
+// Returns false if you cancelled, so nothing is recorded as saved.
+export async function deliver(file) {
+  if (usesShareSheet(navigator) && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file] });
+      return true;
+    } catch (err) {
+      if (err.name === 'AbortError') return false;
+    }
+  }
+  const url = URL.createObjectURL(file);
+  const link = h('a', { href: url, download: file.name });
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  return true;
+}
+
+// White by default. A remembered preference, so it is fine if storage is unavailable.
+export function setTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  try { localStorage.setItem('theme', theme); } catch { /* it just will not be remembered */ }
+}
+export function loadTheme() {
+  let theme = 'light';
+  try { theme = localStorage.getItem('theme') === 'dark' ? 'dark' : 'light'; } catch { /* stay white */ }
+  document.documentElement.dataset.theme = theme;
+}

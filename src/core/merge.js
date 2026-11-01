@@ -4,7 +4,8 @@
 import { applyRules, pairCardRepayments } from './categorise.js';
 import { KINDS, SCHEMA_VERSION, isIsoDate, migrate } from './model.js';
 
-const CLASSES = ['cash', 'credit', 'investment', 'crypto', 'pension'];
+// 'loan' only appears in backups from a test build. migrate removes it after the merge.
+const CLASSES = ['cash', 'credit', 'investment', 'crypto', 'pension', 'loan'];
 const COLLECTIONS = ['accounts', 'transactions', 'balances', 'statements'];
 
 // Keys are checked because JSON can hold a key such as __proto__, which would change how
