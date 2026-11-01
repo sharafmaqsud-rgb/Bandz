@@ -1,9 +1,10 @@
 // Starts the app, switches between screens and keeps the data saved. The screens are drawn
 // again from the data after every change, which is simple and quick at this size.
-import { createState } from './core/model.js';
+import { createState, migrate } from './core/model.js';
 import { clearState, loadState, saveState } from './store.js';
 import { h, notice, svg } from './ui/dom.js';
 import { renderAccounts } from './ui/accounts.js';
+import { renderGoals } from './ui/goals.js';
 import { renderImport } from './ui/import.js';
 import { renderOverview } from './ui/overview.js';
 import { renderSpending } from './ui/spending.js';
@@ -14,6 +15,7 @@ const icon = (...paths) => svg('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'tr
 const SCREENS = {
   overview: { title: 'Overview', render: renderOverview, icon: () => icon('M4 11l8-7 8 7', 'M6 10v10h12V10') },
   spending: { title: 'Spending', render: renderSpending, icon: () => icon('M5 20V10', 'M12 20V4', 'M19 20v-7') },
+  goals: { title: 'Goals', render: renderGoals, icon: () => icon('M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z') },
   accounts: { title: 'Accounts', render: renderAccounts, icon: () => icon('M3 6h18v13H3z', 'M3 10h18') },
   import: { title: 'Import', render: renderImport, icon: () => icon('M12 4v11', 'M7 11l5 5 5-5', 'M4 20h16') },
 };
@@ -67,7 +69,7 @@ const app = {
 window.addEventListener('hashchange', () => { window.scrollTo(0, 0); app.render(); });
 
 try {
-  app.state = (await loadState()) ?? createState();
+  app.state = migrate((await loadState()) ?? createState());
 } catch (err) {
   app.state = createState();
   app.saveError = err.message;

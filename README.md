@@ -4,8 +4,8 @@ One private place for your whole financial position, how you are tracking agains
 goals, and where to optimise. It runs on your own devices, makes no model calls, and
 cannot move money or place trades. Every insight is plain rules and arithmetic.
 
-**Status: Phase 2 ready for review.** The Overview, Spending, Accounts and Import screens
-work on this Mac. Goals and insights come in Phase 3, and installing on your phone in Phase 4.
+**Status: Phase 3 ready for review.** All five screens work on this Mac: Overview, Spending,
+Goals, Accounts and Import. Installing on your phone and backup come in Phase 4.
 
 ## Running the app
 
@@ -73,14 +73,16 @@ prints check results and counts only, never your transactions.
 | `src/core/csv.js` | Reads CSV files, for investment exports later. No bank uses it at the moment. |
 | `src/core/pdf-text.js` | Pulls positioned text out of a PDF using pdf.js. |
 | `src/core/pdf-statements.js` | Rebuilds each bank's table from that text, checks it, and imports it. |
-| `src/core/analysis.js` | Every number: monthly totals, changes, net worth, data gaps. Goals and insights arrive in Phase 3. |
+| `src/core/analysis.js` | Monthly totals, changes, net worth and data gaps. |
+| `src/core/insights.js` | Goal measures and every optimisation rule. |
+| `src/core/summary.js` | The plain-text summary to paste into a Claude chat. |
 | `src/store.js` | Saves the data in the browser's private storage. |
 | `src/app.js` | Starts the app, switches screens and saves after each change. |
 | `src/ui/*.js` | One file per screen, plus `dom.js` helpers that insert all text safely. |
 | `src/ui/styles.css` | Layout and the light and dark colours. |
 | `vendor/pdfjs/` | The bundled copy of pdf.js. A test checks it matches the pinned package. |
 | `tools/serve.mjs` | The development server. It refuses to serve your private folders. |
-| `tests/analysis.test.js` | Tests for the numbers shown on the screens. |
+| `tests/analysis.test.js`, `tests/insights.test.js` | Tests for the numbers shown on the screens. |
 | `src/core/defaults.js` | Starting categories, generic merchant rules, accounts and thresholds. |
 | `src/core/categorise.js` | Matches descriptions to categories, and derives a short merchant name. |
 | `src/core/model.js` | The data itself: transactions, balances, rules, goals and duplicate-safe import. |
@@ -148,8 +150,8 @@ Importing the next statement fills the gap.
 
 ## Metric definitions
 
-Each is labelled "calculated" or "estimate" in the app. Cash buffer, ISA contributions and
-recurring charges are defined here and arrive on screen in Phase 3.
+Each is labelled "calculated" or "estimate" in the app. Until you set a target, a measure is
+shown with no pass or fail.
 
 | Metric | Definition | Label |
 |---|---|---|
@@ -161,12 +163,49 @@ recurring charges are defined here and arrive on screen in Phase 3.
 | Share of spending | One category divided by the month's total spend | Calculated |
 | Change on last month | This month's category total minus the calendar month before. Left out when that month has no data. | Calculated |
 | Savings and investing rate | Saved divided by income. Payroll pension contributions never reach your bank, so they are not included. | Calculated |
-| Cash buffer | (Cash balances minus card balances owed) divided by average monthly essential spend over the last three months | Calculated |
+| Cash buffer | (Cash balances minus card balances owed) divided by average monthly essential spend over this month and up to two before it. Uncategorised spending is not essential, so categorise first or this reads high. | Calculated |
 | ISA contributions | Payments categorised `ISA contribution` since 6 April, plus anything you enter as paid before your first import | Calculated |
+| Monthly amount to use the allowance | Allowance left divided by full months left before 5 April | Calculated |
+| ISA paid in by 5 April at your target | Paid so far plus your monthly target for each full month left | Estimate |
+| Net worth trend | Net worth on each date a balance was recorded, carrying other accounts forward. An account joins from its first balance, so adding one shows as a rise. | Calculated |
 | Net worth | Latest balance of every account, added together, with card balances counting as negative. Accounts with no balance are listed as missing, not counted as zero. | Calculated |
 | Investments | Investment and crypto accounts together | Calculated |
 | Recurring charge | Same merchant at a steady amount (within 15%) in at least 3 of the last 6 months | Estimate |
 | Annualised cost | Monthly recurring amount times 12 | Estimate |
+
+### Optimisation rules
+
+These thresholds are the same as v1's and are held in `src/core/defaults.js`.
+
+| Insight | Rule | Label |
+|---|---|---|
+| Biggest categories | The top three spend categories this month | Calculated |
+| Change on last month | Total spend and the three largest category moves against the previous calendar month | Calculated |
+| Above your recent average | At least 30% and £50 above the category's average over up to three previous months. A category with no history is not flagged. | Calculated |
+| Recurring charges | Same merchant, within 15% of its typical amount, in at least 3 of the last 6 months, at most twice a month, and seen this month or last | Estimate |
+| Possible duplicates | Same account, merchant and amount of at least £5, within 2 days | Calculated |
+| Unusually large purchases | At least £75 and three times the typical purchase in that category over 6 months, once the category has 5 past purchases | Calculated |
+| Fees and interest | The `Fees & interest` category this month | Calculated |
+| Small purchases add up | At least 8 non-essential purchases of £15 or less | Calculated |
+| Cash buffer shortfall | Your target months times essential spend, minus cash after cards | Calculated |
+| ISA allowance pace | Projected total at your target against the allowance | Estimate |
+
+## Pension providers
+
+Add as many as you need under Accounts. Each has its own balance history, and they add up to
+the Pension total, with each provider listed under it on Overview. Names stay on your device.
+Removing a provider also removes its balance history.
+
+## ISA accounts
+
+Tick "This is an ISA" under Accounts for Vanguard or Trading 212. Payments into a ticked
+account count towards the allowance, including past statements.
+
+## Summary for Claude
+
+"Prepare summary for Claude" on Spending creates plain text for you to copy and paste into a
+chat yourself. It holds totals, category names and merchant names. It leaves out account
+numbers, pension provider names and full statement descriptions. The app never calls a model.
 
 The three statement types above are all in sterling, so nothing is currently excluded for
 being in another currency. If a non-GBP source is added later, its rows will be left out of

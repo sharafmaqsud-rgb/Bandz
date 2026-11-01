@@ -75,6 +75,46 @@ export function setBalance(state, date, account, text, now = Date.now()) {
   state.balances[`${date}|${account}`] = { date, account, balancePence, updatedAt: now };
 }
 
+// Add an account of your own, such as another pension provider. Its name stays in your
+// data and never in the code.
+export function addAccount(state, name, accountClass, now = Date.now()) {
+  const clean = String(name ?? '').trim();
+  if (!clean) throw new Error('Please enter a name');
+  const exists = Object.values(state.accounts).some((a) => a.name.toLowerCase() === clean.toLowerCase());
+  if (exists) throw new Error(`There is already an account called ${clean}`);
+  const slug = clean.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'account';
+  let key = `${accountClass}-${slug}`;
+  for (let n = 2; state.accounts[key]; n++) key = `${accountClass}-${slug}-${n}`;
+  state.accounts[key] = { name: clean, class: accountClass, hasStatements: false, isIsa: false, updatedAt: now };
+  return key;
+}
+
+export function renameAccount(state, key, name, now = Date.now()) {
+  const clean = String(name ?? '').trim();
+  if (!clean) throw new Error('Please enter a name');
+  const taken = Object.entries(state.accounts).some(([k, a]) => k !== key && a.name.toLowerCase() === clean.toLowerCase());
+  if (taken) throw new Error(`There is already an account called ${clean}`);
+  Object.assign(state.accounts[key], { name: clean, updatedAt: now });
+}
+
+// Remove an account and its balances. An account with transactions is refused, because
+// removing it would rewrite past months.
+export function removeAccount(state, key) {
+  if (Object.values(state.transactions).some((t) => t.account === key)) {
+    throw new Error('This account has transactions, so it cannot be removed');
+  }
+  delete state.accounts[key];
+  for (const [k, b] of Object.entries(state.balances)) if (b.account === key) delete state.balances[k];
+}
+
+// Bring data saved by an earlier version of the app up to date with new fields.
+export function migrate(state) {
+  state.goals = { ...GOALS, ...state.goals };
+  state.settings = { ...SETTINGS, ...state.settings };
+  state.statements ??= {};
+  return state;
+}
+
 // Add or replace a rule; there is only ever one rule per pattern.
 export function setRule(state, pattern, category, now = Date.now()) {
   const pat = pattern.trim().toUpperCase();

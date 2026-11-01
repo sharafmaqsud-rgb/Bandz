@@ -35,6 +35,7 @@ export const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 // Every figure says how it was arrived at.
 export const calculated = () => h('span', { className: 'tag' }, 'calculated');
+export const estimated = () => h('span', { className: 'tag' }, 'estimate');
 
 // Today in your own time zone, as yyyy-mm-dd.
 export function today() {

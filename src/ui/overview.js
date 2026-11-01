@@ -31,10 +31,19 @@ export function renderOverview(app) {
       row('Cash', money(nw.groups.cash)),
       row('Investments', money(nw.groups.investments)),
       row('Pension', money(nw.groups.pension)),
+      pensionLines(state, nw),
       row('Cards owed', money(nw.groups.cards))),
     ym && latestMonth(state, ym),
     attention(app, nw, ym),
   ];
+}
+
+// With more than one provider, show each under the pension total.
+function pensionLines(state, nw) {
+  const pensions = Object.entries(state.accounts).filter(([key, a]) => a.class === 'pension' && nw.latest[key]);
+  if (pensions.length < 2) return null;
+  return pensions.map(([key, a]) => h('div', { className: 'row sub' },
+    h('div', null, a.name), h('div', { className: 'right' }, money(nw.latest[key].balancePence))));
 }
 
 function latestMonth(state, ym) {
@@ -48,7 +57,7 @@ function latestMonth(state, ym) {
       row('Saved and invested', money(s.saved)),
       row('Left over', money(leftOver(s))),
       rate !== null && row('Savings and investing rate', percent(rate))),
-    h('p', { className: 'muted' }, h('a', { href: '#spending' }, 'See where it went')));
+    h('p', { className: 'muted' }, h('a', { href: '#spending' }, 'See where it went and what to optimise')));
 }
 
 function attention(app, nw, ym) {

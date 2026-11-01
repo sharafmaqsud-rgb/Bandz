@@ -2,7 +2,9 @@
 import { categoryChanges, classify, inMonth, leftOver, monthGaps, monthsWithData, savingsRate, shiftMonth, summarise } from '../core/analysis.js';
 import { setManualCategory } from '../core/categorise.js';
 import { formatPence } from '../core/money.js';
-import { calculated, categorySelect, dayName, h, money, monthName, notice, percent, row, svg } from './dom.js';
+import { buildInsights } from '../core/insights.js';
+import { monthlySummary } from '../core/summary.js';
+import { calculated, categorySelect, dayName, estimated, h, money, monthName, notice, percent, row, svg } from './dom.js';
 
 // The change is written in words with an arrow, never shown by colour alone.
 function changeText(change) {
@@ -99,6 +101,12 @@ export function renderSpending(app) {
           .filter((t) => classify(t, state.categories).kind === 'spend' && classify(t, state.categories).name === c.name)
           .sort(byDate))))))),
     h('section', null,
+      h('h2', null, 'Where to optimise'),
+      buildInsights(state, ym).map((i) => h('div', { className: 'insight' },
+        h('h3', null, i.title, i.label === 'estimate' ? estimated() : calculated()),
+        h('p', null, i.detail),
+        i.items.length > 0 && h('ul', null, i.items.map((item) => h('li', null, item)))))),
+    h('section', null,
       h('h2', null, 'The month in total', calculated()),
       h('div', { className: 'rows' },
         row('Income', money(s.income)),
@@ -112,7 +120,38 @@ export function renderSpending(app) {
       moreSection(app, 'Income', ofKind('income')),
       moreSection(app, 'Saved and invested', ofKind('saving')),
       moreSection(app, 'Transfers and card repayments, not counted as spending', ofKind('transfer'))),
+    summarySection(app, ym),
   ];
+}
+
+// Plain text to paste into a Claude chat. The app only prepares it, and sends nothing.
+function summarySection(app, ym) {
+  const { state, view } = app;
+  if (view.summaryMonth !== ym) {
+    return h('section', null,
+      h('button', { onClick: () => { view.summaryMonth = ym; view.summaryCopied = false; app.render(); } }, 'Prepare summary for Claude'));
+  }
+  const text = monthlySummary(state, ym);
+  const box = h('textarea', { className: 'summary', readonly: true, 'aria-label': 'Monthly summary', value: text });
+  return h('section', null,
+    h('h2', null, 'Summary for Claude'),
+    h('p', { className: 'muted' }, 'Copy this and paste it into a chat yourself. It holds totals and merchant names, but no account numbers.'),
+    box,
+    h('p', null),
+    h('button', {
+      className: 'primary',
+      onClick: async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          view.summaryCopied = true;
+        } catch {
+          box.select(); // the clipboard can be refused, so leave it ready to copy by hand
+          view.summaryCopied = false;
+          return;
+        }
+        app.render();
+      },
+    }, view.summaryCopied ? '✓ Copied' : 'Copy summary'));
 }
 
 function moreSection(app, title, rows) {

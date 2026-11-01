@@ -100,7 +100,7 @@ export function netWorth(state, asOf) {
     groups[GROUP_OF_CLASS[account.class]] += b.balancePence;
     total += b.balancePence;
   }
-  return { total, groups, missing };
+  return { total, groups, missing, latest };
 }
 
 // ---------- Data quality ----------

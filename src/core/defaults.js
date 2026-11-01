@@ -65,6 +65,12 @@ export const ACCOUNTS = {
   'lg-pension': { name: 'L&G pension', class: 'pension', hasStatements: false, isIsa: false },
 };
 
+// The rule wording for payments into an account, used when you mark it as an ISA or not.
+export const FUNDING_PATTERNS = {
+  'vanguard-isa': ['VANGUARD*'],
+  'trading212': ['TRADING 212', 'TRADING212'],
+};
+
 // Analysis thresholds, unchanged from v1 apart from being held in pence.
 export const SETTINGS = {
   isaAllowancePence: 2000000,
@@ -84,4 +90,5 @@ export const GOALS = {
   savingsRateTarget: null,
   monthlySpendCapPence: null,
   bufferMonthsTarget: null,
+  netWorthTargetPence: null,
 };
