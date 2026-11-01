@@ -8,11 +8,20 @@ import { extractPages } from '../src/core/pdf-text.js';
 import { parseStatement, importStatement } from '../src/core/pdf-statements.js';
 import { createState, applySeed } from '../src/core/model.js';
 import { classify } from '../src/core/analysis.js';
+import { reviewQueue } from '../src/core/review.js';
 import { maskText } from './mask.js';
 
 const seedPath = new URL('../local/seed.json', import.meta.url);
 const state = createState();
 if (existsSync(seedPath)) applySeed(state, JSON.parse(readFileSync(seedPath, 'utf8')));
+
+const printQueue = () => {
+  const q = reviewQueue(state);
+  console.log(`\n=== all statements: ${Object.keys(state.transactions).length} rows, asks about ${q.merchants.length} merchants and ${q.unusual.length} unusual rows`);
+  const reasons = {};
+  for (const t of Object.values(state.transactions)) if (t.reason) reasons[t.reason.replace(/\(.*\)/, '')] = (reasons[t.reason.replace(/\(.*\)/, '')] ?? 0) + 1;
+  console.log(reasons);
+};
 
 for (const path of process.argv.slice(2)) {
   console.log('\n---');
@@ -37,8 +46,15 @@ for (const path of process.argv.slice(2)) {
     console.log(`  uncategorised: ${unknown} of ${added.length}`);
     const paired = Object.values(state.transactions).filter((t) => t.catSource === 'paired').length;
     console.log(`  current-account rows paired as card repayments so far: ${paired}`);
+    const sources = {};
+    for (const t of added) {
+      const label = t.category ? `${t.catSource}/${t.confidence}` : 'asks you';
+      sources[label] = (sources[label] ?? 0) + 1;
+    }
+    console.log('  how rows were filed:', sources);
   } catch (e) {
     // Only a FormatError quotes statement text. A TypeError is a bug in this code and is safe to show.
     console.log(e instanceof TypeError ? e.stack : `ERROR ${maskText(e.message)}`);
   }
 }
+printQueue();

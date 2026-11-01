@@ -3,7 +3,7 @@
 // it answers every request from that copy. It only ever handles this app's own files.
 
 // BEGIN GENERATED
-const VERSION = 'a8f059faad37c8f3';
+const VERSION = '6f37c77afc59a19d';
 const FILES = [
   "./",
   "icons/apple-touch-icon.png",
@@ -19,11 +19,13 @@ const FILES = [
   "src/core/dates.js",
   "src/core/defaults.js",
   "src/core/insights.js",
+  "src/core/merchants.js",
   "src/core/merge.js",
   "src/core/model.js",
   "src/core/money.js",
   "src/core/pdf-statements.js",
   "src/core/pdf-text.js",
+  "src/core/review.js",
   "src/core/summary.js",
   "src/pwa.js",
   "src/store.js",
@@ -33,6 +35,7 @@ const FILES = [
   "src/ui/goals.js",
   "src/ui/import.js",
   "src/ui/overview.js",
+  "src/ui/review.js",
   "src/ui/security.js",
   "src/ui/spending.js",
   "src/ui/styles.css",

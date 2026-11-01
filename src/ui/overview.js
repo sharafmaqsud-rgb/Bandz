@@ -1,5 +1,6 @@
 // Overview: your whole position, the latest month, and anything that needs attention.
-import { inMonth, leftOver, monthGaps, monthsWithData, netWorth, savingsRate, summarise, uncategorisedMerchants } from '../core/analysis.js';
+import { inMonth, leftOver, monthGaps, monthsWithData, netWorth, savingsRate, summarise } from '../core/analysis.js';
+import { reviewCount, reviewQueue } from '../core/review.js';
 import { pairCardRepayments } from '../core/categorise.js';
 import { calculated, dayName, fullDate, h, money, monthName, notice, percent, plural, row, today } from './dom.js';
 
@@ -65,10 +66,10 @@ function attention(app, nw, ym) {
   const { state } = app;
   const items = [];
 
-  const unnamed = uncategorisedMerchants(state);
-  if (unnamed.length) {
-    items.push(notice('attention', `Needs attention: ${plural(unnamed.length, 'merchant has', 'merchants have')} no category`,
-      h('p', null, 'They count as spending or income until you choose. ', h('a', { href: '#import' }, 'Choose categories'))));
+  const queue = reviewCount(reviewQueue(state));
+  if (queue) {
+    items.push(notice('attention', `Needs your eye: ${plural(queue, 'item', 'items')}`,
+      h('p', null, 'Everything else was filed for you. ', h('a', { href: '#import' }, 'Take a look'))));
   }
 
   const unpaired = pairCardRepayments(state);

@@ -155,6 +155,30 @@ prints check results and counts only, never your transactions.
   rows print no year, so it comes from the statement date.
 - **Foreign card spending:** the sterling amount the bank charged is used.
 
+### How payments get filed
+
+Each payment goes through these steps, strongest evidence first, and records its reason. There
+is no AI model, only rules that run on your device.
+
+| Step | Example | Confidence |
+|---|---|---|
+| Your rules, then the standard rules | `TESCO`, or a merchant you have categorised | High |
+| A list of well-known UK merchants | `OCTOPUS ENERGY` | High |
+| Your own past choices about similar names | You filed `BLUEWATER WIDGETS`, so `BLUEWATER GADGETS` follows | Medium |
+| The bank's payment type | `CHG` is a fee | Medium |
+| Words in the name | `THE ROSE TAVERN` | Medium |
+| Patterns | Money back on a card is a refund. A large payment in every month is salary. | Medium |
+| Small unknown card purchases under £30, up to £100 per merchant | Filed under Other spend without asking | Low |
+
+**It asks you** when nothing fits and the amount matters: unknown Direct Debits and transfers,
+money in from an unknown source, and repeating payments to an unknown payee. It offers a
+suggestion, and your answer applies to future payments and teaches similar ones. It also shows
+you large automatic filings, and purchases far above your usual for that category.
+
+Other spend is listed separately under an optional tidy-up, so that a catch-all cannot hide
+things. Your hand-set choices are never replaced. Learning must fit the direction of the money,
+so a payment out cannot become income by sharing a word with your employer.
+
 ### Known limits of duplicate detection
 
 Both come from the v1 fingerprint:

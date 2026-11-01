@@ -126,7 +126,7 @@ export function largePurchases(state, ym) {
     if (c.kind !== 'spend' || -t.amountPence < anomalyMinPence || past.length < 5) continue;
     const typical = median(past);
     if (-t.amountPence >= anomalyMultiple * typical) {
-      out.push({ date: t.date, merchant: merchant(t.description), amount: -t.amountPence, category: c.name, typical: Math.trunc(typical) });
+      out.push({ key: t.key, date: t.date, merchant: merchant(t.description), amount: -t.amountPence, category: c.name, typical: Math.trunc(typical) });
     }
   }
   return out.sort((a, b) => b.amount - a.amount).slice(0, 8);

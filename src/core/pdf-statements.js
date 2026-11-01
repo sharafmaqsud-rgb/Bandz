@@ -83,6 +83,7 @@ function parseClub(pages) {
       if (CLUB_ROW_DATE.test(first.s) && near(first.x, dateCol.x)) {
         const desc = l.cells.filter((c) => c.x >= descCol.x - 4 && c.x < typeCol.x - 4).map((c) => c.s);
         const amounts = l.cells.filter((c) => c.x >= typeCol.x && MONEY.test(c.s));
+        const typeCell = l.cells.find((c) => near(c.x, typeCol.x));
         const inCell = amounts.find((c) => near(right(c), right(inCol), 6));
         const outCell = amounts.find((c) => near(right(c), right(outCol), 6));
         const balCell = amounts.find((c) => near(right(c), right(balCol), 6));
@@ -92,6 +93,7 @@ function parseClub(pages) {
           description: cleanDesc(desc),
           amountPence: inCell ? parseMoney(inCell.s) : -parseMoney(outCell.s),
           balancePence: balCell ? parseMoney(balCell.s) : null,
+          bankType: typeCell ? typeCell.s.toUpperCase() : null,
           y: l.y,
         };
         rows.push(last);

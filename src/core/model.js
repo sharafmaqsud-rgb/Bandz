@@ -49,7 +49,12 @@ export function addTransactions(state, rows, now = Date.now()) {
     const n = (seen.get(base) ?? 0) + 1;
     seen.set(base, n);
     const key = `${base}|${n}`;
-    if (state.transactions[key]) { skipped++; continue; }
+    if (state.transactions[key]) {
+      // A re-import can still add detail read by a newer version of the app.
+      if (r.bankType && !state.transactions[key].bankType) state.transactions[key].bankType = r.bankType;
+      skipped++;
+      continue;
+    }
     state.transactions[key] = {
       key,
       account: r.account,
@@ -58,6 +63,7 @@ export function addTransactions(state, rows, now = Date.now()) {
       amountPence: r.amountPence,
       currency,
       balancePence: r.balancePence ?? null,
+      bankType: r.bankType ?? null, // the payment type printed on the statement, such as DD
       category: null,   // null = not categorised yet
       catSource: null,  // 'rule' or 'manual'
       sourceFile: r.sourceFile ?? null,
@@ -133,8 +139,9 @@ export function setRule(state, pattern, category, now = Date.now()) {
   if (!pat) throw new Error('Rule pattern is blank');
   if (!known(state.categories, category)) throw new Error(`Unknown category '${category}'`);
   const existing = state.rules.find((r) => r.pattern === pat);
-  if (existing) Object.assign(existing, { category, updatedAt: now });
-  else state.rules.push({ pattern: pat, category, updatedAt: now });
+  // userSet marks your own choices, which the app learns from.
+  if (existing) Object.assign(existing, { category, userSet: true, updatedAt: now });
+  else state.rules.push({ pattern: pat, category, userSet: true, updatedAt: now });
 }
 
 // Load the private starting file (shape: see seed.example.json). Unknown goal names

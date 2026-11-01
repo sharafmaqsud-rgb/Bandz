@@ -4,6 +4,11 @@
 // word prefix (NANDO* matches NANDOS). When several rules match, the longest pattern
 // wins, so UBER EATS beats UBER. Rows you set by hand are never overwritten.
 
+import { BANK_TYPE_CATEGORY, CATEGORY_WORDS, KNOWN_MERCHANTS } from './merchants.js';
+
+let compiledKnown = null;
+let compiledWords = null;
+
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\/-]/g, '\\$&');
 
 export function compileRules(rules) {
@@ -27,19 +32,113 @@ export function matchCategory(description, compiled) {
   return best ? best.category : null;
 }
 
-// (Re)categorise every transaction not set by hand. Returns how many changed.
+// Words too common to tell two merchants apart, so they are never used to learn from.
+const COMMON = new Set(['THE', 'AND', 'LTD', 'LIMITED', 'PLC', 'LLP', 'UK', 'GB', 'LONDON', 'STORE', 'SHOP', 'ONLINE', 'PAYMENT', 'CARD', 'COM', 'WWW', 'SERVICES', 'GROUP']);
+const SMALL_UNKNOWN_PENCE = 3000;       // £30: too little to interrupt you about
+const SMALL_UNKNOWN_TOTAL_PENCE = 10000; // unless the same merchant has reached £100
+const REGULAR_INCOME_PENCE = 50000;     // £500 in, from the same payer, in two or more months
+
+const wordsOf = (name) => name.toUpperCase().split(/[^A-Z0-9&]+/).filter((w) => w.length >= 4 && !COMMON.has(w) && !/\d/.test(w));
+
+// Facts gathered once per run: the patterns, and what your own decisions teach about words.
+function buildContext(state) {
+  const context = {
+    rules: compileRules(state.rules),
+    known: compiledKnown ??= compileRules(KNOWN_MERCHANTS),
+    words: compiledWords ??= compileRules(CATEGORY_WORDS),
+    learned: new Map(),
+    byMerchant: new Map(),
+  };
+  const teach = (name, category) => {
+    for (const w of wordsOf(name)) {
+      if (!context.learned.has(w)) context.learned.set(w, new Map());
+      const seen = context.learned.get(w);
+      seen.set(category, (seen.get(category) ?? 0) + 1);
+    }
+  };
+  for (const r of state.rules) if (r.userSet) teach(r.pattern.replace(/\*$/, ''), r.category);
+  for (const t of Object.values(state.transactions)) {
+    const name = merchant(t.description);
+    if (t.catSource === 'manual') teach(name, t.category);
+    const m = context.byMerchant.get(name) ?? { months: new Set(), totalOut: 0, amounts: new Set() };
+    m.months.add(t.date.slice(0, 7));
+    if (t.amountPence < 0) m.totalOut -= t.amountPence;
+    m.amounts.add(t.amountPence);
+    context.byMerchant.set(name, m);
+  }
+  return context;
+}
+
+// A word counts only if your decisions about it all point the same way.
+function learnedCategory(name, context) {
+  for (const w of wordsOf(name)) {
+    const seen = context.learned.get(w);
+    if (seen?.size === 1) return { category: [...seen.keys()][0], word: w };
+  }
+  return null;
+}
+
+// Decides one payment. Stronger evidence goes first, and every answer says why. A result with
+// no category means the app is unsure and will ask, offering a suggestion if it has one.
+function decide(t, state, context) {
+  const fileAs = (category, source, confidence, reason) => ({ category, catSource: source, confidence, reason, suggestion: null });
+  const ask = (reason, suggestion = null) => ({ category: null, catSource: null, confidence: 'low', reason, suggestion });
+
+  const ruled = matchCategory(t.description, context.rules);
+  if (ruled) return fileAs(ruled, 'rule', 'high', 'Matched a rule.');
+  const known = matchCategory(t.description, context.known);
+  if (known) return fileAs(known, 'auto', 'high', 'A merchant the app recognises.');
+
+  const name = merchant(t.description);
+  const learned = learnedCategory(name, context);
+  // Learning must fit the direction of the money: a payment out is never income because it
+  // shares a word with your employer.
+  const fits = learned && (state.categories[learned.category].kind === 'income') === (t.amountPence > 0);
+  if (fits) return fileAs(learned.category, 'auto', 'medium', `Similar to a choice you made (${learned.word}).`);
+
+  const byType = t.bankType && Object.hasOwn(BANK_TYPE_CATEGORY, t.bankType) ? BANK_TYPE_CATEGORY[t.bankType] : null;
+  if (byType) return fileAs(byType, 'auto', 'medium', `The bank marked this as ${t.bankType}.`);
+  const word = matchCategory(t.description, context.words);
+  if (word) return fileAs(word, 'auto', 'medium', 'Its name suggests this category.');
+
+  const isCard = state.accounts[t.account].class === 'credit';
+  const m = context.byMerchant.get(name);
+
+  if (t.amountPence > 0) {
+    // Money coming back to a card is a refund, which should reduce spending, not count as income.
+    if (isCard) return fileAs('Other spend', 'auto', 'medium', 'Money back on a card, treated as a refund.');
+    if (t.amountPence >= REGULAR_INCOME_PENCE && m.months.size >= 2) {
+      return fileAs('Salary', 'auto', 'medium', 'A large payment in, arriving every month.');
+    }
+    return ask('Money in from a source the app does not recognise.', 'Other income');
+  }
+
+  const out = -t.amountPence;
+  const isCardPurchase = isCard || t.bankType === 'DEB';
+  if (isCardPurchase && out < SMALL_UNKNOWN_PENCE && m.totalOut < SMALL_UNKNOWN_TOTAL_PENCE) {
+    return fileAs('Other spend', 'auto', 'low', 'A small purchase at an unfamiliar merchant.');
+  }
+  if (t.bankType === 'DD' || t.bankType === 'SO') {
+    return ask(t.bankType === 'DD' ? 'A Direct Debit from an unfamiliar company.' : 'A standing order the app cannot place.', 'Bills & phone');
+  }
+  if (m.months.size >= 2 && m.amounts.size === 1) return ask('The same amount, repeating, to an unfamiliar payee.', 'Subscriptions');
+  if (t.bankType === 'FPO') return ask('A bank transfer, possibly to a person.', 'Family & household');
+  return ask('An unfamiliar merchant.', isCardPurchase ? 'Other spend' : null);
+}
+
+// (Re)categorise every transaction not set by hand. Returns how many changed category.
 export function applyRules(state, now = Date.now()) {
-  const compiled = compileRules(state.rules);
+  const context = buildContext(state);
   let changed = 0;
   for (const tx of Object.values(state.transactions)) {
     if (tx.catSource === 'manual' || tx.catSource === 'paired') continue;
-    const category = matchCategory(tx.description, compiled);
-    if (category !== tx.category) {
-      tx.category = category;
-      tx.catSource = category ? 'rule' : null;
-      tx.updatedAt = now;
+    const d = decide(tx, state, context);
+    if (d.category !== tx.category) {
       changed++;
+      tx.updatedAt = now;
+      tx.reviewed = false;
     }
+    Object.assign(tx, d);
   }
   return changed;
 }
@@ -71,7 +170,7 @@ export function pairCardRepayments(state, now = Date.now()) {
     if (!match) { unpaired.push(pay); continue; }
     used.add(match.key);
     if (match.category === null) {
-      Object.assign(match, { category: 'Card repayment', catSource: 'paired', updatedAt: now });
+      Object.assign(match, { category: 'Card repayment', catSource: 'paired', confidence: 'high', reason: 'Same amount as a payment received on your card.', suggestion: null, updatedAt: now });
     }
   }
   return unpaired;
@@ -83,6 +182,9 @@ export function setManualCategory(state, key, category, now = Date.now()) {
   if (!Object.hasOwn(state.categories, category)) throw new Error(`Unknown category '${category}'`);
   tx.category = category;
   tx.catSource = 'manual';
+  tx.confidence = 'high';
+  tx.reason = 'You chose this.';
+  tx.suggestion = null;
   tx.updatedAt = now;
 }
 

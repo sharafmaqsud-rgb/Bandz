@@ -1,12 +1,12 @@
 // Import: read statements on this device, say exactly what happened to each, and settle
 // anything the rules could not.
-import { uncategorisedMerchants } from '../core/analysis.js';
 import { applyRules, pairCardRepayments } from '../core/categorise.js';
-import { applySeed, setRule } from '../core/model.js';
+import { applySeed } from '../core/model.js';
 import { formatPence } from '../core/money.js';
 import { parseStatement, importStatement } from '../core/pdf-statements.js';
 import { extractPages } from '../core/pdf-text.js';
-import { categorySelect, fullDate, h, money, notice, plural } from './dom.js';
+import { fullDate, h, notice, plural } from './dom.js';
+import { renderReview } from './review.js';
 import { renderSecurity } from './security.js';
 
 // pdf.js is large, so it only loads when a statement is actually being read. Its worker
@@ -65,7 +65,6 @@ async function handleFiles(app, files) {
 
 export function renderImport(app) {
   const { state, view } = app;
-  const merchants = uncategorisedMerchants(state);
   const unpaired = pairCardRepayments(state);
   const statements = Object.values(state.statements).sort((a, b) => b.date.localeCompare(a.date));
   return [
@@ -91,21 +90,7 @@ export function renderImport(app) {
         h('p', null, 'No current-account payment of the same amount was found within 10 days. Importing the statement for that month usually fixes this. Until then, if the payment did leave your current account, it may be counting as spending as well as the purchases it paid for.'),
         h('ul', null, unpaired.map((p) => h('li', null,
           `${state.accounts[p.account].name}: ${formatPence(p.amountPence)} on ${fullDate(p.date)}`))))),
-    merchants.length > 0 && h('section', null,
-      h('h2', null, `Choose categories (${merchants.length})`),
-      h('p', { className: 'muted' }, 'Each choice also applies to future statements. To change a single transaction, use Spending.'),
-      merchants.map((m) => h('div', { className: 'review' },
-        h('div', { className: 'review-head' },
-          h('span', null, m.merchant, h('span', { className: 'muted' }, ` · ${plural(m.count, 'row', 'rows')}`)),
-          money(m.pence)),
-        categorySelect(state, {
-          label: `Category for ${m.merchant}`,
-          onPick: (category) => {
-            setRule(state, m.merchant, category);
-            applyRules(state);
-            app.commit();
-          },
-        })))),
+    renderReview(app),
     statements.length > 0 && h('section', null,
       h('h2', null, 'Statements on this device'),
       h('div', { className: 'rows' }, statements.map((s) => h('div', { className: 'row' },

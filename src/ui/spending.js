@@ -26,7 +26,9 @@ function txList(app, rows) {
   const { state } = app;
   return h('ul', { className: 'txs' }, rows.map((t) => h('li', { className: 'tx' },
     h('div', { className: 'tx-head' },
-      h('div', null, t.description, h('div', { className: 'muted' }, `${dayName(t.date)}, ${state.accounts[t.account].name}`)),
+      h('div', null, t.description,
+        h('div', { className: 'muted' }, `${dayName(t.date)}, ${state.accounts[t.account].name}`),
+        t.catSource === 'auto' && h('div', { className: 'muted' }, `Filed automatically. ${t.reason ?? ''}`)),
       money(t.amountPence)),
     categorySelect(state, {
       label: `Category for ${t.description}`,
