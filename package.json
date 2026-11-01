@@ -1,0 +1,16 @@
+{
+  "name": "personal-finance",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Private, local-first personal finance PWA. Its one dependency, pdf.js, reads statements on the device.",
+  "engines": {
+    "node": "26.13.0"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "pdfjs-dist": "6.4.299"
+  }
+}

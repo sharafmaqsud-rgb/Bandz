@@ -1,0 +1,12 @@
+{
+  "balances": [
+    { "date": "2026-01-01", "account": "lloyds-club", "balance": "1000.00" },
+    { "date": "2026-01-01", "account": "amex-gold", "balance": "120.00" }
+  ],
+  "rules": [
+    { "pattern": "EXAMPLE EMPLOYER LTD", "category": "Salary" }
+  ],
+  "goals": {
+    "monthlyIsaTargetPence": 100000
+  }
+}

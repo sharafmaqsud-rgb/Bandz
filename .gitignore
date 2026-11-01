@@ -1,0 +1,10 @@
+# Personal data: never commit. See README "What stays private".
+local/
+reference/
+*.csv.local
+*.finbackup
+.DS_Store
+
+# Node toolchain installed for development only
+.tools/
+node_modules/
